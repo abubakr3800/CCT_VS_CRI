@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CCT & CRI Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 30px;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .controls {
+      margin: 20px auto;
+      max-width: 400px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    }
+    .color-display {
+      width: 200px;
+      height: 200px;
+      margin: 20px auto;
+      border-radius: 50%;
+      border: 3px solid #ccc;
+    }
+    .sample-colors {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .color-box {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type=range] {
+      width: 100%;
+    }
+  </style>
+</head>
+<body id="">
+  <h1>CCT & CRI Simulator</h1>
+  
+  <div class="controls" id="">
+    <label for="cct">CCT (K): <span id="cctValue">6500</span></label>
+    <input type="range" id="cct" min="1000" max="10000" value="6500" step="100" />
+    
+    <label for="cri">CRI: <span id="criValue">80</span></label>
+    <input type="range" id="cri" min="0" max="100" value="80" step="1" />
+  </div>
+
+  <div class="color-display" id="cctDisplay"></div>
+
+  <h3>Sample Colors (simulate CRI)</h3>
+  <div class="sample-colors" id="sampleColors">
+    <!-- Realistic sample color palette -->
+    <div class="color-box" data-original="#F44336"></div> <!-- Red -->
+    <div class="color-box" data-original="#4CAF50"></div> <!-- Green -->
+    <div class="color-box" data-original="#2196F3"></div> <!-- Blue -->
+    <div class="color-box" data-original="#FF9800"></div> <!-- Orange -->
+    <div class="color-box" data-original="#9C27B0"></div> <!-- Purple -->
+    <div class="color-box" data-original="#FFEB3B"></div> <!-- Yellow -->
+    <div class="color-box" data-original="#795548"></div> <!-- Brown -->
+    <div class="color-box" data-original="#00BCD4"></div> <!-- Cyan -->
+  </div>
+
+  <script>
+    const cctSlider = document.getElementById("cct");
+    const criSlider = document.getElementById("cri");
+    const cctValue = document.getElementById("cctValue");
+    const criValue = document.getElementById("criValue");
+    const cctDisplay = document.getElementById("cctDisplay");
+    const colorBoxes = document.querySelectorAll(".color-box");
+
+    function clamp(x) {
+      return Math.max(0, Math.min(255, Math.round(x)));
+    }
+
+    function cctToColor(kelvin) {
+      kelvin = kelvin / 100;
+      let red, green, blue;
+
+      if (kelvin <= 66) {
+        red = 255;
+        green = kelvin;
+        green = 99.47 * Math.log(green) - 161.12;
+        blue = kelvin <= 19 ? 0 : (138.52 * Math.log(kelvin - 10) - 305.04);
+      } else {
+        red = 329.7 * Math.pow(kelvin - 60, -0.133);
+        green = 288.1 * Math.pow(kelvin - 60, -0.0755);
+        blue = 255;
+      }
+
+      return `rgb(${clamp(red)}, ${clamp(green)}, ${clamp(blue)})`;
+    }
+
+    function hexToHSL(hex) {
+      let r = parseInt(hex.substr(1, 2), 16) / 255;
+      let g = parseInt(hex.substr(3, 2), 16) / 255;
+      let b = parseInt(hex.substr(5, 2), 16) / 255;
+
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+
+      if (max === min) {
+        h = s = 0;
+      } else {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h *= 60;
+      }
+
+      return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    function hslToCss(h, s, l) {
+      return `hsl(${h}, ${s}%, ${l}%)`;
+    }
+
+    function simulateCRI(colorBox, cri) {
+      const originalHex = colorBox.dataset.original;
+      let { h, s, l } = hexToHSL(originalHex);
+
+      // Low CRI: desaturate, shift hue a bit, dim light
+      let criFactor = cri / 100;
+
+      // Desaturate and darken
+      s = Math.round(s * (0.5 + criFactor / 2));
+      l = Math.round(l * (0.7 + criFactor * 0.3));
+      
+      // Shift hue if CRI is poor
+      if (cri < 80) {
+        h += (1 - criFactor) * 20 * (Math.random() > 0.5 ? 1 : -1); // ±20 deg hue shift
+      }
+
+      colorBox.style.backgroundColor = hslToCss(h, s, l);
+    }
+
+    function updateDisplay() {
+      const cct = parseInt(cctSlider.value);
+      const cri = parseInt(criSlider.value);
+
+      cctValue.textContent = cct;
+      criValue.textContent = cri;
+
+      cctDisplay.style.background = cctToColor(cct);
+
+      colorBoxes.forEach(box => simulateCRI(box, cri));
+    }
+
+    cctSlider.addEventListener("input", updateDisplay);
+    criSlider.addEventListener("input", updateDisplay);
+    updateDisplay();
+  </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Image CRI & CCT Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      text-align: center;
+      background-color: #f2f2f2;
+    }
+    canvas {
+      max-width: 60%;
+      height: auto;
+      margin-top: 20px;
+      border: 1px solid #ccc;
+    }
+    input[type="range"] {
+      width: 300px;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>CRI & CCT Image Simulator</h1>
+
+  <input type="file" id="imageInput" accept="image/*"><br>
+
+  <div class="controls">
+    <label>CCT (K): <span id="cctValue">6500</span></label><br>
+    <input type="range" id="cctSlider" min="1000" max="10000" value="6500" step="100"><br><br>
+
+    <label>CRI: <span id="criValue">100</span></label><br>
+    <input type="range" id="criSlider" min="0" max="100" value="100" step="1">
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const cctSlider = document.getElementById('cctSlider');
+    const criSlider = document.getElementById('criSlider');
+    const cctValue = document.getElementById('cctValue');
+    const criValue = document.getElementById('criValue');
+
+    let originalImage = null;
+
+    imageInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          originalImage = ctx.getImageData(0, 0, img.width, img.height);
+          applyFilters();
+        };
+        img.src = event.target.result;
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    function applyFilters() {
+      if (!originalImage) return;
+
+      const cct = parseInt(cctSlider.value);
+      const cri = parseInt(criSlider.value);
+
+      cctValue.textContent = cct;
+      criValue.textContent = cri;
+
+      const imageData = new ImageData(new Uint8ClampedArray(originalImage.data), originalImage.width, originalImage.height);
+      const data = imageData.data;
+
+      // Simulate CCT by color shifting (warmer or cooler)
+      const kelvin = cct;
+      const tempFactor = (kelvin - 6500) / 3500; // Normalize [-1, 1]
+      const redShift = tempFactor * 40;
+      const blueShift = -tempFactor * 40;
+
+      for (let i = 0; i < data.length; i += 4) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        // Apply white balance
+        r = clamp(r + redShift);
+        b = clamp(b + blueShift);
+
+        // Simulate CRI:
+        const criFactor = cri / 100;
+        const avg = (r + g + b) / 3;
+
+        // Shift hue if CRI is low
+        if (cri < 95) {
+          r = lerp(r, avg, 1 - criFactor);
+          g = lerp(g, avg, 1 - criFactor);
+          b = lerp(b, avg, 1 - criFactor);
+        }
+
+        // Desaturate based on CRI
+        r = lerp(r, avg, 0.5 * (1 - criFactor));
+        g = lerp(g, avg, 0.5 * (1 - criFactor));
+        b = lerp(b, avg, 0.5 * (1 - criFactor));
+
+        data[i] = clamp(r);
+        data[i + 1] = clamp(g);
+        data[i + 2] = clamp(b);
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function clamp(value) {
+      return Math.max(0, Math.min(255, Math.round(value)));
+    }
+
+    cctSlider.addEventListener('input', applyFilters);
+    criSlider.addEventListener('input', applyFilters);
+  </script>
+</body>
+</html>

@@ -82,11 +82,12 @@
       const imageData = new ImageData(new Uint8ClampedArray(originalImage.data), originalImage.width, originalImage.height);
       const data = imageData.data;
 
-      // Simulate CCT by color shifting (warmer or cooler)
-      const kelvin = cct;
-      const tempFactor = (kelvin - 6500) / 3500; // Normalize [-1, 1]
-      const redShift = tempFactor * 40;
-      const blueShift = -tempFactor * 40;
+        // Simulate CCT by color shifting (warmer or cooler)
+        const kelvin = cct;
+        const tempFactor = (kelvin - 6500) / 3500;
+        const redShift = -tempFactor * 40;  // <-- fixed!
+        const blueShift = tempFactor * 40;
+
 
       for (let i = 0; i < data.length; i += 4) {
         let r = data[i];

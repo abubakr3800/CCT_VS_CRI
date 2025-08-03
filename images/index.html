@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Light Glare Simulation</title>
+  <style>
+    body {
+      background-color: #111;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-family: Arial, sans-serif;
+    }
+
+    .light-container {
+      position: relative;
+      width: 900px;
+      height: 900px;
+    }
+
+    .beam {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, rgba(255,255,180,0.6) 0%, transparent 70%);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.4s ease-in-out;
+      filter: blur(40px);
+      z-index: 1;
+    }
+
+    @keyframes flicker {
+      0%, 100% {
+        opacity: 0.8;
+        filter: blur(40px) brightness(1.2);
+      }
+      50% {
+        opacity: 1;
+        filter: blur(55px) brightness(1.6);
+      }
+    }
+
+    .light-on .beam {
+      opacity: 1;
+      animation: flicker 2s infinite ease-in-out;
+    }
+
+    .light-image {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+    }
+
+    .switch {
+      margin-top: 30px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #fff;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #ccc;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="light-container" id="lightBox">
+    <div class="beam"></div>
+    <img src="ECO-HighBay-100W-transparent0002.svg" alt="Searchlight" class="light-image">
+  </div>
+
+  <div class="switch">
+    <button onclick="toggleLight()">Toggle ON / OFF</button>
+  </div>
+
+  <script>
+    const lightBox = document.getElementById('lightBox');
+    function toggleLight() {
+      lightBox.classList.toggle('light-on');
+    }
+  </script>
+
+</body>
+</html>

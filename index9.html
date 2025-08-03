@@ -15,7 +15,7 @@
       transition: all 0.4s ease-in-out;
     }
     .classroom-img {
-      max-width: 600px;
+      max-width: 200px;
       width: 100%;
       transition: opacity 0.8s ease, filter 0.5s;
     }
@@ -43,39 +43,45 @@
     <!-- Controls -->
     <div class="card p-4 mb-4">
       <div class="row g-4">
-        <div class="col-md-6">
-          <label for="cri" class="form-label">CRI (Color Rendering Index): <span id="criVal">80</span></label>
-          <input type="range" class="form-range" id="cri" min="0" max="100" value="80">
-        </div>
-        <div class="col-md-6">
-          <label for="cct" class="form-label">CCT (Color Temperature): <span id="cctVal">4000</span>K</label>
-          <input type="range" class="form-range" id="cct" min="1000" max="10000" step="100" value="4000">
-        </div>
-        <div class="col-md-6">
-          <label for="flicker" class="form-label">Flicker (% Modulation): <span id="flickerVal">0</span>%</label>
-          <input type="range" class="form-range" id="flicker" min="0" max="100" value="0">
-        </div>
-        <div class="col-md-6">
-          <label for="glare" class="form-label">Glare Level: <span id="glareVal">0</span></label>
-          <input type="range" class="form-range" id="glare" min="0" max="100" value="0">
-        </div>
-      </div>
-    </div>
 
-    <!-- Classroom Scene Images -->
-    <div class="text-center my-4 d-flex justify-content-center gap-3 flex-wrap" id="classroomScene">
-      <img src="images/kindergarten.jpg" id="kindergarten" class="classroom-img" alt="Kindergarten">
-      <img src="images/primary.jpg" id="primary" class="classroom-img" alt="Primary">
-      <img src="images/secondary.jpg" id="secondary" class="classroom-img" alt="Secondary">
-      <img src="images/college.jpg" id="university" class="classroom-img" alt="University">
-      <img src="images/tunable/s.png" id="sad1" class="classroom-img hidden" alt="Sad 1">
-      <img src="images/tunable/t.png" id="sad2" class="classroom-img hidden" alt="Sad 2">
-    </div>
+        <div class="col-6">
+          <div class="col-md-6">
+            <label for="cri" class="form-label">CRI (Color Rendering Index): <span id="criVal">80</span></label>
+            <input type="range" class="form-range" id="cri" min="0" max="100" value="80">
+          </div>
+          <div class="col-md-6">
+            <label for="cct" class="form-label">CCT (Color Temperature): <span id="cctVal">4000</span>K</label>
+            <input type="range" class="form-range" id="cct" min="1000" max="10000" step="100" value="4000">
+          </div>
+          <div class="col-md-6">
+            <label for="flicker" class="form-label">Flicker (% Modulation): <span id="flickerVal">0</span>%</label>
+            <input type="range" class="form-range" id="flicker" min="0" max="100" value="0">
+          </div>
+          <div class="col-md-6">
+            <label for="glare" class="form-label">Glare Level: <span id="glareVal">0</span></label>
+            <input type="range" class="form-range" id="glare" min="0" max="100" value="0">
+          </div>
+        </div>
 
-    <!-- Warning Text -->
-    <div class="text-center mt-4">
-      <div id="warningText" class="text-danger fw-bold" style="display:none; font-size: 1.2rem;">
-        ⚠️ Lighting conditions are unsuitable for learning. Please adjust Glare or Flicker levels.
+        <div class="col-6">
+          <!-- Classroom Scene Images -->
+          <div class="text-center my-4 d-flex justify-content-center gap-3 flex-wrap" id="classroomScene">
+            <img src="images/kindergarten.jpg" id="kindergarten" class="classroom-img" alt="Kindergarten">
+            <img src="images/primary.jpg" id="primary" class="classroom-img" alt="Primary">
+            <img src="images/secondary.jpg" id="secondary" class="classroom-img" alt="Secondary">
+            <img src="images/college.jpg" id="college" class="classroom-img" alt="college">
+            <img src="images/tunable/s.png" id="sad1" class="classroom-img hidden" alt="Sad 1">
+            <img src="images/tunable/t.png" id="sad2" class="classroom-img hidden" alt="Sad 2">
+          </div>
+
+          <!-- Warning Text -->
+          <div class="text-center mt-4">
+            <div id="warningText" class="text-danger fw-bold" style="display:none; font-size: 1.2rem;">
+              ⚠️ Lighting conditions are unsuitable for learning. Please adjust Glare or Flicker levels.
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
 
@@ -130,7 +136,7 @@
       kindergarten: document.getElementById('kindergarten'),
       primary: document.getElementById('primary'),
       secondary: document.getElementById('secondary'),
-      university: document.getElementById('university'),
+      college: document.getElementById('college'),
       sad1: document.getElementById('sad1'),
       sad2: document.getElementById('sad2')
     };

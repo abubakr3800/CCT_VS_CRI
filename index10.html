@@ -229,7 +229,7 @@
 
     function updateClassroomImages(cct, flicker, glare) {
       const warningText = document.getElementById('warningText');
-      const blurAll = flicker > 30 || glare > 60;
+      const blurAll = flicker > 30 || glare > 19;
 
       Object.values(classroomImages).forEach(img => {
         img.classList.add('hidden');
@@ -238,7 +238,7 @@
 
       if (blurAll) {
         warningText.style.display = 'block';
-        if (glare > 33 && glare <= 66) classroomImages.sad1.classList.remove('hidden');
+        if (glare > 19 && glare <= 66) classroomImages.sad1.classList.remove('hidden');
         else if (glare > 66) classroomImages.sad2.classList.remove('hidden');
         return;
       }
@@ -270,7 +270,7 @@
       flickerVal.textContent = flicker;
       glareVal.textContent = glare;
 
-// CRI Card Text
+          // CRI Card Text
             document.getElementById('criFeedbackVal').textContent = `Current CRI: ${cri}`;
             document.getElementById('criEffect').textContent = cri >= 80 ? "Enhances color accuracy and reduces eye strain." : "May distort color perception and reduce learning clarity.";
             document.getElementById('criCause').textContent = "CRI indicates how accurately colors are rendered under a light source.";

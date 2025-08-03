@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CRI & CCT Glare Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+    }
+    canvas {
+      margin: 10px;
+      border: 1px solid #ccc;
+    }
+    .controls {
+      margin: 20px auto;
+      max-width: 500px;
+      text-align: left;
+    }
+    .controls label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    .glare-result {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Lighting Image Simulator (CRI & CCT)</h2>
+
+  <div class="controls">
+    <label for="cctSlider">🌡️ Color Temperature (CCT): <span id="cctValue">4000</span> K</label>
+    <input type="range" id="cctSlider" min="2000" max="10000" step="100" value="4000" />
+
+    <label for="criSlider">🎨 CRI (Color Rendering Index): <span id="criValue">80</span></label>
+    <input type="range" id="criSlider" min="60" max="100" step="1" value="80" />
+
+    <div id="glareInfo" class="glare-result">Glare Effect: Calculating...</div>
+  </div>
+
+  <canvas id="canvas" width="300" height="200"></canvas>
+  <canvas id="canvas2" width="300" height="200"></canvas>
+  <canvas id="canvasLoad" width="300" height="200"></canvas>
+
+  <script>
+    const cctSlider = document.getElementById("cctSlider");
+    const criSlider = document.getElementById("criSlider");
+    const cctValue = document.getElementById("cctValue");
+    const criValue = document.getElementById("criValue");
+    const glareInfo = document.getElementById("glareInfo");
+
+    const canvas = document.getElementById("canvas");
+    const canvas2 = document.getElementById("canvas2");
+    const canvasLoad = document.getElementById("canvasLoad");
+
+    const ctx = canvas.getContext("2d");
+    const ctx2 = canvas2.getContext("2d");
+    const ctxLoad = canvasLoad.getContext("2d");
+
+    let originalImage = new Image();
+    let originalImage2 = new Image();
+    let originalImageLoad = new Image();
+
+    originalImage.src = "images/tunable/f.png";
+    originalImage2.src = originalImage.src;
+    originalImageLoad.src = originalImage.src;
+
+    function calculateGlare(cct, cri) {
+      const normCCT = (cct - 1000) / (10000 - 1000); // 0 to 1
+      const normCRI = cri / 100;
+      const glareScore = (normCCT * (1 - normCRI)) * 100;
+
+      let description = "Low";
+      if (glareScore > 60) description = "High";
+      else if (glareScore > 30) description = "Moderate";
+
+      return {
+        score: glareScore.toFixed(1),
+        description: description
+      };
+    }
+
+    function processImage(image, ctx, cct, cri) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let data = imageData.data;
+
+      const cctEffect = (cct - 4000) / 3000;
+      const criFactor = cri / 100;
+
+      for (let i = 0; i < data.length; i += 4) {
+        // Simulate CCT: shift warmth/coolness
+        data[i] += cctEffect * 20;     // Red
+        data[i + 2] -= cctEffect * 20; // Blue
+
+        // Simulate CRI: desaturation
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        data[i] = data[i] * criFactor + avg * (1 - criFactor);
+        data[i + 1] = data[i + 1] * criFactor + avg * (1 - criFactor);
+        data[i + 2] = data[i + 2] * criFactor + avg * (1 - criFactor);
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function applyFilters() {
+      const cct = parseInt(cctSlider.value);
+      const cri = parseInt(criSlider.value);
+
+      cctValue.textContent = cct;
+      criValue.textContent = cri;
+
+      const glare = calculateGlare(cct, cri);
+      glareInfo.textContent = `Glare Effect: ${glare.description} (Score: ${glare.score})`;
+      glareInfo.style.color = glare.score > 60 ? "red" : glare.score > 30 ? "orange" : "green";
+
+      if (originalImage) processImage(originalImage, ctx, cct, cri);
+      if (originalImage2) processImage(originalImage2, ctx2, cct, cri);
+      if (originalImageLoad) processImage(originalImageLoad, ctxLoad, cct, cri);
+    }
+
+    // Event listeners
+    cctSlider.addEventListener("input", applyFilters);
+    criSlider.addEventListener("input", applyFilters);
+
+    // Load image then apply initial filters
+    originalImage.onload = () => {
+      applyFilters();
+    };
+  </script>
+</body>
+</html>

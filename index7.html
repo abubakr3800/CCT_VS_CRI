@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lighting Simulator - CRI, CCT, Flicker, Glare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 2rem;
+      background-color: #121212;
+      color: #f1f1f1;
+    }
+    .card {
+      transition: all 0.4s ease-in-out;
+    }
+    .canvas-stack {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+    }
+    .canvas-stack canvas {
+      position: relative;
+      top: 0;
+      left: 0;
+      transition: opacity 0.8s ease;
+      opacity: 0;
+      z-index: 0;
+      width: 30%;
+    }
+    .canvas-stack canvas.active {
+      opacity: 1;
+      z-index: 1;
+    }
+    .flicker {
+      animation: flickerAnim 0.2s infinite;
+    }
+    @keyframes flickerAnim {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .feedback-card p {
+      margin-bottom: 0.5rem;
+    }
+    .feedback-card b {
+      display: block;
+      margin-top: 0.5rem;
+      color: #ffc107;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="mb-4">Lighting Quality Simulator</h1>
+
+    <div class="card p-4 mb-4 bg-dark text-white">
+      <div class="row g-4">
+        <div class="col-6">
+            <div class="col-md-6">
+              <label for="cri" class="form-label">CRI (Color Rendering Index): <span id="criVal">80</span></label>
+              <input type="range" class="form-range" id="cri" min="0" max="100" value="80">
+            </div>
+            <div class="col-md-6">
+              <label for="cct" class="form-label">CCT (Color Temperature): <span id="cctVal">4000</span>K</label>
+              <input type="range" class="form-range" id="cct" min="1000" max="10000" step="100" value="4000">
+            </div>
+            <div class="col-md-6">
+              <label for="flicker" class="form-label">Flicker (% Modulation): <span id="flickerVal">0</span>%</label>
+              <input type="range" class="form-range" id="flicker" min="0" max="100" value="0">
+            </div>
+            <div class="col-md-6">
+              <label for="glare" class="form-label">Glare Level: <span id="glareVal">0</span></label>
+              <input type="range" class="form-range" id="glare" min="0" max="100" value="0">
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="canvas-stack" id="canvas-stack">
+                <canvas id="canvas1"></canvas>
+                <canvas id="canvas2"></canvas>
+                <canvas id="canvas3"></canvas>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    
+
+    <div class="row g-4 mt-4" id="cardsContainer">
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>CRI Feedback</h5>
+          <p id="criFeedbackVal"></p>
+          <p id="criEffect"></p>
+          <p id="criCause"></p>
+          <p id="criScenario"></p>
+          <b id="criScope"></b>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>CCT Feedback</h5>
+          <p id="cctFeedbackVal"></p>
+          <p id="cctEffect"></p>
+          <p id="cctCause"></p>
+          <p id="cctScenario"></p>
+          <b id="cctScope"></b>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>Flicker Feedback</h5>
+          <p id="flickerFeedbackVal"></p>
+          <p id="flickerEffect"></p>
+          <p id="flickerCause"></p>
+          <p id="flickerScenario"></p>
+          <b id="flickerScope"></b>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>Glare Feedback</h5>
+          <p id="glareFeedbackVal"></p>
+          <p id="glareEffect"></p>
+          <p id="glareCause"></p>
+          <p id="glareScenario"></p>
+          <b id="glareScope"></b>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    //   const canvases = [
+    //     document.getElementById('canvas1'),
+    //     document.getElementById('canvas2'),
+    //     document.getElementById('canvas3')
+    //   ];
+
+      const canvases = [
+        document.getElementById('canvas1'),
+        document.getElementById('canvas2'),
+        document.getElementById('canvas3')
+      ];
+    
+      const canva = document.getElementById('canvas-stack');
+
+      const contexts = canvases.map(c => c.getContext('2d'));
+
+      const criSlider = document.getElementById('cri');
+      const cctSlider = document.getElementById('cct');
+      const flickerSlider = document.getElementById('flicker');
+      const glareSlider = document.getElementById('glare');
+
+      const criVal = document.getElementById('criVal');
+      const cctVal = document.getElementById('cctVal');
+      const flickerVal = document.getElementById('flickerVal');
+      const glareVal = document.getElementById('glareVal');
+
+      const imagePaths = [
+        "images/tunable/f.png",
+        "images/tunable/s.png",
+        "images/tunable/t.png"
+      ];
+
+      let originalImagesData = [];
+
+      function loadImages(callback) {
+        let loadedCount = 0;
+        imagePaths.forEach((path, index) => {
+          const img = new Image();
+          img.onload = function() {
+            canvases[index].width = img.width;
+            canvases[index].height = img.height;
+            contexts[index].drawImage(img, 0, 0);
+            originalImagesData[index] = contexts[index].getImageData(0, 0, img.width, img.height);
+            loadedCount++;
+            if (loadedCount === imagePaths.length) callback();
+          };
+          img.src = path;
+        });
+      }
+
+      function applyFilters() {
+        const cri = parseInt(criSlider.value);
+        const cct = parseInt(cctSlider.value);
+        const flicker = parseInt(flickerSlider.value);
+        const glare = parseInt(glareSlider.value);
+
+        criVal.textContent = cri;
+        cctVal.textContent = cct;
+        flickerVal.textContent = flicker;
+        glareVal.textContent = glare;
+
+        let visibleIndex = 0;
+        if (glare > 66) visibleIndex = 2;
+        else if (glare > 33) visibleIndex = 1;
+
+        canvases.forEach((canvas, index) => {
+          canvas.classList.toggle('active', index === visibleIndex);
+          canvas.classList.toggle('flicker', flicker > 20 && index === visibleIndex);
+          canvas.style.filter = index === visibleIndex ? `drop-shadow( 0 ${glare / 3}px ${glare / 8}px rgba(255,255,255,${glare / 100}))` : 'none';
+        });
+
+        if (!originalImagesData[visibleIndex]) return;
+        const ctx = contexts[visibleIndex];
+        const imgData = new ImageData(new Uint8ClampedArray(originalImagesData[visibleIndex].data), originalImagesData[visibleIndex].width, originalImagesData[visibleIndex].height);
+        const data = imgData.data;
+
+        const tempFactor = (cct - 6500) / 3500;
+        const redShift = -tempFactor * 40;
+        const blueShift = tempFactor * 40;
+        const criFactor = cri / 100;
+
+        for (let i = 0; i < data.length; i += 4) {
+          let r = data[i], g = data[i + 1], b = data[i + 2];
+          r = clamp(r + redShift);
+          b = clamp(b + blueShift);
+          const avg = (r + g + b) / 3;
+          if (cri < 95) {
+            r = lerp(r, avg, 1 - criFactor);
+            g = lerp(g, avg, 1 - criFactor);
+            b = lerp(b, avg, 1 - criFactor);
+          }
+          r = lerp(r, avg, 0.5 * (1 - criFactor));
+          g = lerp(g, avg, 0.5 * (1 - criFactor));
+          b = lerp(b, avg, 0.5 * (1 - criFactor));
+          data[i] = clamp(r);
+          data[i + 1] = clamp(g);
+          data[i + 2] = clamp(b);
+        }
+        
+            // CRI Card Text
+            document.getElementById('criFeedbackVal').textContent = `Current CRI: ${cri}`;
+            document.getElementById('criEffect').textContent = cri >= 80 ? "Enhances color accuracy and reduces eye strain." : "May distort color perception and reduce learning clarity.";
+            document.getElementById('criCause').textContent = "CRI indicates how accurately colors are rendered under a light source.";
+            document.getElementById('criScenario').textContent = cri >= 80 ? "Students see real-life colors in science and art materials." : "Students may confuse colors in biology diagrams or artwork.";
+            document.getElementById('criScope').textContent = cri >= 90 ? "Ideal for Art, Biology, Chemistry students." : "Usable for general subjects, but avoid for color-sensitive tasks.";
+
+            // CCT Card Text
+            document.getElementById('cctFeedbackVal').textContent = `Current CCT: ${cct}K`;
+            document.getElementById('cctEffect').textContent = cct < 3500 ? "Warm light - induces calmness, but may reduce alertness." : cct > 6000 ? "Cool light - increases alertness, but may cause stress." : "Balanced light suitable for most educational tasks.";
+            document.getElementById('cctCause').textContent = "CCT alters the color tone (warm/cool) and affects brain activity.";
+            document.getElementById('cctScenario').textContent = cct < 3500 ? "Students feel relaxed but less focused." : cct > 6000 ? "Students feel energetic but may get visual fatigue." : "Students stay comfortable and attentive.";
+            document.getElementById('cctScope').textContent = cct < 3500 ? "Better for music/art and relaxation zones." : cct > 6000 ? "Better for exams or short focus sessions." : "Good for all students in normal classrooms.";
+
+            // Flicker Card Text
+            document.getElementById('flickerFeedbackVal').textContent = `Flicker: ${flicker}%`;
+            document.getElementById('flickerEffect').textContent = flicker > 30 ? "High flicker can cause headaches and eye fatigue." : "No major flicker risk.";
+            document.getElementById('flickerCause').textContent = "Flicker is rapid brightness fluctuation due to power modulation.";
+            document.getElementById('flickerScenario').textContent = flicker > 30 ? "Students complain of discomfort or can't focus." : "Students stay visually comfortable.";
+            document.getElementById('flickerScope').textContent = flicker > 30 ? "Avoid for young children and students with visual sensitivity." : "Acceptable for most students.";
+
+            // Glare Card Text
+            document.getElementById('glareFeedbackVal').textContent = `Glare Level: ${glare}`;
+            document.getElementById('glareEffect').textContent = glare > 60 ? "High glare reduces screen and board visibility." : "Low glare supports visual clarity.";
+            document.getElementById('glareCause').textContent = "Glare is caused by overly bright light in contrast with surroundings.";
+            document.getElementById('glareScenario').textContent = glare > 60 ? "Students squint, struggle to read or see the whiteboard." : "Students view clearly without strain.";
+            document.getElementById('glareScope').textContent = glare > 60 ? "Avoid for computer labs and reading zones." : "Safe for classrooms and study halls.";
+
+    
+            criVal.textContent = cri;
+            cctVal.textContent = cct;
+            flickerVal.textContent = flicker;
+            glareVal.textContent = glare;
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      function clamp(v) {
+        return Math.max(0, Math.min(255, Math.round(v)));
+      }
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      [criSlider, cctSlider, flickerSlider, glareSlider].forEach(input => {
+        input.addEventListener('input', applyFilters);
+      });
+
+      loadImages(applyFilters);
+    </script>
+</body>
+</html>

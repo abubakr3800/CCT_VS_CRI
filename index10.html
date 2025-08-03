@@ -34,6 +34,13 @@
       margin-top: 0.5rem;
       color: #ffc107;
     }
+    #simulatedEffect {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      border: 2px solid #444;
+      margin-top: 2rem;
+    }
   </style>
 </head>
 <body>
@@ -43,29 +50,25 @@
     <!-- Controls -->
     <div class="card p-4 mb-4 bg-dark text-white">
       <div class="row g-4">
-
         <div class="col-6">
-          <div class="col-md-6">
+          <div class="col-12">
             <label for="cri" class="form-label">CRI (Color Rendering Index): <span id="criVal">80</span></label>
             <input type="range" class="form-range" id="cri" min="0" max="100" value="80">
-          </div>
-          <div class="col-md-6">
             <label for="cct" class="form-label">CCT (Color Temperature): <span id="cctVal">4000</span>K</label>
             <input type="range" class="form-range" id="cct" min="1000" max="10000" step="100" value="4000">
-          </div>
-          <div class="col-md-6">
             <label for="flicker" class="form-label">Flicker (% Modulation): <span id="flickerVal">0</span>%</label>
             <input type="range" class="form-range" id="flicker" min="0" max="100" value="0">
-          </div>
-          <div class="col-md-6">
             <label for="glare" class="form-label">Glare Level: <span id="glareVal">0</span></label>
             <input type="range" class="form-range" id="glare" min="0" max="100" value="0">
+          </div>
+          <!-- Canvas Simulation -->
+          <div class="col-12">
+            <canvas id="simulatedEffect"></canvas>
           </div>
         </div>
 
         <div class="col-6">
-          <!-- Classroom Scene Images -->
-          <div class="text-center my-4 d-flex justify-content-center gap-3 flex-wrap" id="classroomScene">
+          <div class="col-12 d-flex justify-content-center gap-3 flex-wrap" id="classroomScene">
             <img src="images/kindergarten.jpg" id="kindergarten" class="classroom-img" alt="Kindergarten">
             <img src="images/primary.jpg" id="primary" class="classroom-img" alt="Primary">
             <img src="images/secondary.jpg" id="secondary" class="classroom-img" alt="Secondary">
@@ -73,17 +76,17 @@
             <img src="images/tunable/s.png" id="sad1" class="classroom-img hidden" alt="Sad 1">
             <img src="images/tunable/t.png" id="sad2" class="classroom-img hidden" alt="Sad 2">
           </div>
-
-          <!-- Warning Text -->
           <div class="text-center mt-4">
             <div id="warningText" class="text-danger fw-bold" style="display:none; font-size: 1.2rem;">
               ⚠️ Lighting conditions are unsuitable for learning. Please adjust Glare or Flicker levels.
             </div>
           </div>
-
         </div>
+
       </div>
     </div>
+
+    <!-- Feedback Cards -->
 
     <!-- Feedback Cards -->
     <div class="row g-4 mt-4" id="cardsContainer">
@@ -130,8 +133,82 @@
     </div>
   </div>
 
-  <!-- JavaScript -->
-  <script>
+
+    <!-- JavaScript -->
+    <script>
+      const canvas = document.getElementById('simulatedEffect');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      let originalImage = null;
+
+      img.onload = function () {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        applyFilters();
+      };
+      img.src = 'images/sample.jpg'; // حط صورتك هنا
+
+      function applyVisualEffect(imageData, cct, cri, flicker) {
+        const data = new Uint8ClampedArray(imageData.data);
+        const result = new ImageData(data, imageData.width, imageData.height);
+
+        const kelvinFactor = (cct - 6500) / 3500;
+        const redShift = -kelvinFactor * 40;
+        const blueShift = kelvinFactor * 40;
+        const criFactor = cri / 100;
+        const flickerFactor = flicker / 100;
+
+        for (let i = 0; i < data.length; i += 4) {
+          let r = result.data[i];
+          let g = result.data[i + 1];
+          let b = result.data[i + 2];
+
+          r = r + redShift;
+          b = b + blueShift;
+
+          const avg = (r + g + b) / 3;
+
+          if (cri < 95) {
+            r = r * criFactor + avg * (1 - criFactor);
+            g = g * criFactor + avg * (1 - criFactor);
+            b = b * criFactor + avg * (1 - criFactor);
+          }
+
+          // flicker تأثير: شفافية
+          const alpha = 255 * (1 - 0.3 * flickerFactor);
+
+          result.data[i] = clamp(r);
+          result.data[i + 1] = clamp(g);
+          result.data[i + 2] = clamp(b);
+          result.data[i + 3] = clamp(alpha);
+        }
+        return result;
+      }
+
+      function clamp(v) {
+        return Math.max(0, Math.min(255, Math.round(v)));
+      }
+
+      function updateVisualCanvas(cct, cri, flicker) {
+        if (!originalImage) return;
+        const filtered = applyVisualEffect(originalImage, cct, cri, flicker);
+        ctx.putImageData(filtered, 0, 0);
+      }
+
+      const sliders = ['cri', 'cct', 'flicker', 'glare'];
+      sliders.forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cri = parseInt(document.getElementById('cri').value);
+          const cct = parseInt(document.getElementById('cct').value);
+          const flicker = parseInt(document.getElementById('flicker').value);
+          const glare = parseInt(document.getElementById('glare').value);
+          updateVisualCanvas(cct, cri, flicker);
+        });
+      });
+
+      
     const classroomImages = {
       kindergarten: document.getElementById('kindergarten'),
       primary: document.getElementById('primary'),
@@ -181,7 +258,7 @@
         }
       });
     }
-
+      
     function applyFilters() {
       const cri = parseInt(criSlider.value);
       const cct = parseInt(cctSlider.value);
@@ -233,8 +310,7 @@
     [criSlider, cctSlider, flickerSlider, glareSlider].forEach(input => {
       input.addEventListener('input', applyFilters);
     });
-
-    applyFilters();
-  </script>
+    </script>
+  </div>
 </body>
 </html>

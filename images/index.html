@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Light Glare Simulation</title>
+  <title>Interactive Glare Control</title>
   <style>
+    :root {
+      --glare-blur: 40px;
+      --glare-brightness: 1.2;
+    }
+
+    *{
+      transition: all 1s ease-in-out;
+    }
+
     body {
       background-color: #111;
       margin: 0;
@@ -14,43 +23,32 @@
       align-items: center;
       flex-direction: column;
       font-family: Arial, sans-serif;
+      color: #fff;
     }
 
     .light-container {
       position: relative;
-      width: 900px;
-      height: 900px;
+      width: 300px;
+      height: 300px;
     }
 
-    .beam {
+    .glare {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 900px;
-      height: 900px;
+      width: 600px;
+      height: 600px;
       background: radial-gradient(circle, rgba(255,255,180,0.6) 0%, transparent 70%);
       transform: translate(-50%, -50%);
       border-radius: 50%;
       opacity: 0;
       transition: opacity 0.4s ease-in-out;
-      filter: blur(40px);
+      filter: blur(var(--glare-blur)) brightness(var(--glare-brightness));
       z-index: 1;
     }
 
-    @keyframes flicker {
-      0%, 100% {
-        opacity: 0.8;
-        filter: blur(40px) brightness(1.2);
-      }
-      50% {
-        opacity: 1;
-        filter: blur(55px) brightness(1.6);
-      }
-    }
-
-    .light-on .beam {
+    .light-on .glare {
       opacity: 1;
-      animation: flicker 2s infinite ease-in-out;
     }
 
     .light-image {
@@ -60,8 +58,16 @@
       z-index: 2;
     }
 
-    .switch {
+    .controls {
       margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    input[type="range"] {
+      width: 200px;
     }
 
     button {
@@ -71,30 +77,66 @@
       border-radius: 6px;
       background-color: #fff;
       cursor: pointer;
+      color: #000;
       transition: background-color 0.3s;
     }
 
     button:hover {
       background-color: #ccc;
     }
+
+    label {
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
 
-  <div class="light-container" id="lightBox">
-    <div class="beam"></div>
-    <img src="ECO-HighBay-100W-transparent0002.svg" alt="Searchlight" class="light-image">
+  <div class="container">
+    <div class="light-container" id="lightBox" style="width: 400px; height: 400px; display: inline-block;">
+      <div class="glare" id="glare"></div>
+      <img src="ECO-HighBay-100W-transparent0002.svg" alt="Searchlight" class="light-image">
+    </div>
+  
+    <div id="dizzy" style=" display: inline-block;">
+      <img src="better.jpeg" alt="" width="300">
+    </div>
   </div>
 
-  <div class="switch">
+
+  <div class="controls">
     <button onclick="toggleLight()">Toggle ON / OFF</button>
+
+    <label for="glareRange">Glare Intensity</label>
+    <input type="range" id="glareRange" min="0" max="100" value="40">
   </div>
+
 
   <script>
     const lightBox = document.getElementById('lightBox');
+    const glareRange = document.getElementById('glareRange');
+    const dizzy = document.getElementById('dizzy');
+
     function toggleLight() {
       lightBox.classList.toggle('light-on');
     }
+
+    // Update CSS variables based on range input
+    glareRange.addEventListener('input', function () {
+      const value = parseInt(this.value);
+      const blur = value + 'px';
+      const brightness = 1 + value / 100; // Range from 1 to 2
+      document.documentElement.style.setProperty('--glare-blur', blur);
+      document.documentElement.style.setProperty('--glare-brightness', brightness);
+
+      // dizzy.innerText = value;
+
+      if (brightness < 1.5 && lightBox.classList.contains("light-on")) {
+        dizzy.getElementsByTagName('img')[0].src = 'poor.jpeg';
+      } else{
+        dizzy.getElementsByTagName('img')[0].src = 'better.jpeg';
+      }
+    });
   </script>
 
 </body>

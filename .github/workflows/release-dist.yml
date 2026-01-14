@@ -1,0 +1,67 @@
+name: Release dist.zip + Update manifest.json
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get tag
+        id: tag
+        run: echo "name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      # Create dist.zip from dist/ with index.html at ZIP root
+      - name: Create dist.zip from dist/
+        run: |
+          test -d dist || (echo "dist/ folder not found" && exit 1)
+          test -f dist/index.html || (echo "dist/index.html not found" && exit 1)
+          cd dist
+          zip -r ../dist.zip .
+
+      - name: Create/Update GitHub Release and upload dist.zip
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: Release ${{ steps.tag.outputs.name }}
+          files: dist.zip
+
+      # Update manifest.json on gh-pages branch
+      - name: Update manifest.json on gh-pages
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Fetch gh-pages if it exists
+          git fetch origin gh-pages || true
+
+          # Checkout gh-pages or create it
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git checkout -B gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf .
+          fi
+
+          TAG="${{ steps.tag.outputs.name }}"
+          VERSION="${TAG#v}"
+
+          cat > manifest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "bundle_url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/dist.zip"
+          }
+          EOF
+
+          git add manifest.json
+          git commit -m "Update manifest to ${TAG}" || echo "No changes"
+          git push origin gh-pages

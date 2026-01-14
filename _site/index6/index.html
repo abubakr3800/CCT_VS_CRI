@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lighting Simulator - CRI, CCT, Flicker, Glare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 2rem;
+      background-color: #121212;
+      color: #f1f1f1;
+    }
+    .card {
+      transition: all 0.4s ease-in-out;
+    }
+    canvas {
+      max-width: 100%;
+      border-radius: 10px;
+      margin-top: 1rem;
+      border: 1px solid #666;
+    }
+    .flicker {
+      animation: flickerAnim 0.2s infinite;
+    }
+    @keyframes flickerAnim {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .feedback-card p {
+      margin-bottom: 0.5rem;
+    }
+    .feedback-card b {
+      display: block;
+      margin-top: 0.5rem;
+      color: #ffc107;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="mb-4">Lighting Quality Simulator</h1>
+
+    <div class="card p-4 mb-4 bg-dark text-white">
+      <div class="row g-4">
+
+        <div class="col-6">
+            <div class="col-md-6">
+                <label for="cri" class="form-label">CRI (Color Rendering Index): <span id="criVal">80</span></label>
+                <input type="range" class="form-range" id="cri" min="0" max="100" value="80">
+            </div>
+            <div class="col-md-6">
+                <label for="cct" class="form-label">CCT (Color Temperature): <span id="cctVal">4000</span>K</label>
+                <input type="range" class="form-range" id="cct" min="1000" max="10000" step="100" value="4000">
+            </div>
+            <div class="col-md-6">
+                <label for="flicker" class="form-label">Flicker (% Modulation): <span id="flickerVal">0</span>%</label>
+                <input type="range" class="form-range" id="flicker" min="0" max="100" value="0">
+            </div>
+            <div class="col-md-6">
+                <label for="glare" class="form-label">Glare Level: <span id="glareVal">0</span></label>
+                <input type="range" class="form-range" id="glare" min="0" max="100" value="0">
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="col-12">
+              <label for="imageUpload" class="form-label">Upload an image:</label>
+              <!-- <input class="form-control" type="file" id="imageUpload" accept="image/*"> -->
+              <canvas id="cctCanvas"></canvas>
+            </div>
+        </div>
+
+
+      </div>
+    </div>
+
+    <div class="row g-4" id="cardsContainer">
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>CRI Feedback</h5>
+          <p id="criFeedbackVal"></p>
+          <p id="criEffect"></p>
+          <p id="criCause"></p>
+          <p id="criScenario"></p>
+          <b id="criScope"></b>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>CCT Feedback</h5>
+          <p id="cctFeedbackVal"></p>
+          <p id="cctEffect"></p>
+          <p id="cctCause"></p>
+          <p id="cctScenario"></p>
+          <b id="cctScope"></b>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>Flicker Feedback</h5>
+          <p id="flickerFeedbackVal"></p>
+          <p id="flickerEffect"></p>
+          <p id="flickerCause"></p>
+          <p id="flickerScenario"></p>
+          <b id="flickerScope"></b>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-dark text-light p-3 feedback-card">
+          <h5>Glare Feedback</h5>
+          <p id="glareFeedbackVal"></p>
+          <p id="glareEffect"></p>
+          <p id="glareCause"></p>
+          <p id="glareScenario"></p>
+          <b id="glareScope"></b>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const criSlider = document.getElementById('cri');
+      const cctSlider = document.getElementById('cct');
+      const flickerSlider = document.getElementById('flicker');
+      const glareSlider = document.getElementById('glare');
+
+      const criVal = document.getElementById('criVal');
+      const cctVal = document.getElementById('cctVal');
+      const flickerVal = document.getElementById('flickerVal');
+      const glareVal = document.getElementById('glareVal');
+
+      const canvas = document.getElementById('cctCanvas');
+      const ctx = canvas.getContext('2d');
+      const imageUpload = document.getElementById('imageUpload');
+      let originalImageData = null;
+
+    //   imageUpload.addEventListener('change', e => {
+        // const file = e.target.files[0];
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const img = new Image();
+          img.onload = function() {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            originalImageData = ctx.getImageData(0, 0, img.width, img.height);
+            applyFilters();
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    //   });
+
+      function applyFilters() {
+        const cri = parseInt(criSlider.value);
+        const cct = parseInt(cctSlider.value);
+        const flicker = parseInt(flickerSlider.value);
+        const glare = parseInt(glareSlider.value);
+
+        criVal.textContent = cri;
+        cctVal.textContent = cct;
+        flickerVal.textContent = flicker;
+        glareVal.textContent = glare;
+
+        updateFeedback(cri, cct, flicker, glare);
+
+        if (flicker > 20) {
+          canvas.classList.add('flicker');
+        } else {
+          canvas.classList.remove('flicker');
+        }
+        canvas.style.boxShadow = `0 0 ${glare / 3}px ${glare / 8}px rgba(255,255,255,${glare / 100})`;
+
+        if (!originalImageData) return;
+
+        const imgData = new ImageData(new Uint8ClampedArray(originalImageData.data), originalImageData.width, originalImageData.height);
+        const data = imgData.data;
+        const tempFactor = (cct - 6500) / 3500;
+        const redShift = -tempFactor * 40;
+        const blueShift = tempFactor * 40;
+        const criFactor = cri / 100;
+
+        for (let i = 0; i < data.length; i += 4) {
+          let r = data[i], g = data[i+1], b = data[i+2];
+          r = clamp(r + redShift);
+          b = clamp(b + blueShift);
+          const avg = (r + g + b) / 3;
+          if (cri < 95) {
+            r = lerp(r, avg, 1 - criFactor);
+            g = lerp(g, avg, 1 - criFactor);
+            b = lerp(b, avg, 1 - criFactor);
+          }
+          r = lerp(r, avg, 0.5 * (1 - criFactor));
+          g = lerp(g, avg, 0.5 * (1 - criFactor));
+          b = lerp(b, avg, 0.5 * (1 - criFactor));
+          data[i] = clamp(r);
+          data[i + 1] = clamp(g);
+          data[i + 2] = clamp(b);
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      function updateFeedback(cri, cct, flicker, glare) {
+        document.getElementById("criFeedbackVal").textContent = `Current CRI: ${cri}`;
+        document.getElementById("criEffect").textContent = cri >= 90 ? "Enhances color accuracy for art/science" : "May cause confusion in color-based materials";
+        document.getElementById("criCause").textContent = "Lower CRI reduces spectral accuracy of visible light";
+        document.getElementById("criScenario").textContent = "Colors look faded in drawing or biology charts";
+        document.getElementById("criScope").textContent = cri >= 90 ? "Ideal for art, science & any color-sensitive task" : "Avoid for design/biology tasks";
+
+        document.getElementById("cctFeedbackVal").textContent = `Current CCT: ${cct}K`;
+        document.getElementById("cctEffect").textContent = cct > 5000 ? "Boosts alertness but may feel cold" : cct < 3000 ? "Feels cozy but reduces focus" : "Balances comfort and clarity";
+        document.getElementById("cctCause").textContent = "Blue-rich light affects melatonin and focus";
+        document.getElementById("cctScenario").textContent = "Students feel sleepy under warm yellow light";
+        document.getElementById("cctScope").textContent = cct > 5000 ? "Suited for morning math or exams" : "Best for reading or break time";
+
+        document.getElementById("flickerFeedbackVal").textContent = `Flicker Level: ${flicker}%`;
+        document.getElementById("flickerEffect").textContent = flicker > 30 ? "Can cause headaches and eye strain" : "Minimal effect on health";
+        document.getElementById("flickerCause").textContent = "Light fluctuations affect neural visual processing";
+        document.getElementById("flickerScenario").textContent = "Some students blink more or lose focus";
+        document.getElementById("flickerScope").textContent = flicker < 10 ? "Safe for all students, including neurodiverse" : "Reduce flicker for sensitive learners";
+
+        document.getElementById("glareFeedbackVal").textContent = `Glare Intensity: ${glare}`;
+        document.getElementById("glareEffect").textContent = glare > 60 ? "Glare causes squinting, reduces reading speed" : "Acceptable glare for most tasks";
+        document.getElementById("glareCause").textContent = "Light reflecting off surfaces causes eye strain";
+        document.getElementById("glareScenario").textContent = "Students tilt heads to avoid bright spots";
+        document.getElementById("glareScope").textContent = glare < 40 ? "Good for reading, writing, and screens" : "Reduce for exams or long focus sessions";
+      }
+
+      function clamp(v) {
+        return Math.max(0, Math.min(255, Math.round(v)));
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      [criSlider, cctSlider, flickerSlider, glareSlider].forEach(input => {
+        input.addEventListener('input', applyFilters);
+      });
+    </script>
+</body>
+</html>

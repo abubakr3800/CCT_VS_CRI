@@ -1,0 +1,63 @@
+name: Build dist.zip + Release + Update manifest.json
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tagged code
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: v
+        run: |
+          echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      # Create a FLAT dist.zip with index.html at ZIP root.
+      # This zips the repository content (excluding .git and .github).
+      - name: Create dist.zip (flat root)
+        run: |
+          rm -f dist.zip
+          zip -r dist.zip . -x ".git/*" -x ".github/*"
+
+      - name: Create/Update GitHub Release and upload dist.zip
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: Release ${{ steps.v.outputs.tag }}
+          files: dist.zip
+
+      # Update manifest.json on gh-pages so Attachify can fetch latest version
+      - name: Update manifest.json on gh-pages
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Fetch gh-pages (create if missing)
+          git fetch origin gh-pages || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git checkout -B gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf .
+          fi
+
+          TAG="${{ steps.v.outputs.tag }}"
+          cat > manifest.json <<EOF
+          {
+            "version": "${TAG#v}",
+            "bundle_url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/dist.zip"
+          }
+          EOF
+
+          git add manifest.json
+          git commit -m "Update manifest to ${TAG}" || echo "No changes to commit"
+          git push origin gh-pages

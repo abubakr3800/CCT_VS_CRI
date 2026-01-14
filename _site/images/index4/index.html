@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Classroom Lighting Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f5ef;
+      padding: 20px;
+    }
+
+    .lighting-control {
+      max-width: 700px;
+      margin: auto;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .room {
+      height: 250px;
+      margin-top: 30px;
+      background: radial-gradient(circle at center, #ffffff 0%, #dddddd 100%);
+      border: 1px solid #ccc;
+      position: relative;
+      transition: all 0.4s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .face {
+      width: 120px;
+      height: 120px;
+    }
+
+    #infoBox {
+      margin-top: 20px;
+      font-size: 0.95rem;
+      background: #fff3cd;
+      padding: 10px;
+      border: 1px solid #ffeeba;
+      border-radius: 5px;
+    }
+
+    .download-button {
+      margin-top: 20px;
+      display: inline-block;
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="lighting-control">
+    <h2>Classroom Lighting Simulator</h2>
+
+    <!-- Lux Control -->
+    <label for="luxRange">💡 Lux (Brightness): <span id="luxValue">400</span> lx</label>
+    <input type="range" id="luxRange" min="100" max="1000" step="50" value="400" />
+
+    <!-- Color Temperature -->
+    <label for="cctRange">🌡️ Color Temperature: <span id="cctValue">4000</span> K</label>
+    <input type="range" id="cctRange" min="2700" max="6500" step="100" value="4000" />
+
+    <!-- CRI -->
+    <label for="criRange">🎨 CRI (Color Rendering Index): <span id="criValue">80</span></label>
+    <input type="range" id="criRange" min="60" max="100" step="1" value="80" />
+
+    <!-- Glare -->
+    <label for="glareRange">😖 Glare Level: <span id="glareValue">0</span></label>
+    <input type="range" id="glareRange" min="0" max="100" step="10" value="0" />
+
+    <!-- Visual Display -->
+    <div id="roomDisplay" class="room">
+      <img id="faceImg" class="face" src="tunable/f.png" alt="face" />
+    </div>
+
+    <div id="infoBox"></div>
+
+    <a id="downloadBtn" class="download-button" href="#" download="lighting-simulation.png">Download View</a>
+  </div>
+
+  <script>
+    const luxRange = document.getElementById("luxRange");
+    const cctRange = document.getElementById("cctRange");
+    const criRange = document.getElementById("criRange");
+    const glareRange = document.getElementById("glareRange");
+
+    const luxValue = document.getElementById("luxValue");
+    const cctValue = document.getElementById("cctValue");
+    const criValue = document.getElementById("criValue");
+    const glareValue = document.getElementById("glareValue");
+    const roomDisplay = document.getElementById("roomDisplay");
+    const infoBox = document.getElementById("infoBox");
+    const faceImg = document.getElementById("faceImg");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    function updateFace(glare) {
+      if (glare < 30) {
+        faceImg.src = "tunable/f.png";
+      } else if (glare < 70) {
+        faceImg.src = "tunable/s.png";
+      } else {
+        faceImg.src = "tunable/t.png";
+      }
+    }
+
+    function updateDisplay() {
+      luxValue.textContent = luxRange.value;
+      cctValue.textContent = cctRange.value;
+      criValue.textContent = criRange.value;
+      glareValue.textContent = glareRange.value;
+
+      const brightness = Math.min(100, luxRange.value / 10);
+      const tempHue = (6500 - cctRange.value) / 20 + 20;
+      const glareOverlay = glareRange.value / 100;
+
+      roomDisplay.style.background = `radial-gradient(circle, hsl(${tempHue}, 100%, ${brightness}%) 0%, #ccc 100%)`;
+      roomDisplay.style.boxShadow = `0 0 ${glareRange.value / 2}px ${glareRange.value / 5}px rgba(255,255,255,${glareOverlay})`;
+
+      updateFace(parseInt(glareRange.value));
+
+      infoBox.innerHTML = `
+        <strong>Lighting Quality:</strong><br>
+        • <strong>Lux</strong>: ${luxRange.value} lx — ${luxRange.value < 300 ? "Too dim." : luxRange.value > 700 ? "Overly bright!" : "Balanced."}<br>
+        • <strong>Color Temp</strong>: ${cctRange.value}K — ${cctRange.value < 3500 ? "Relaxing (warm)" : cctRange.value > 5000 ? "Alertness (cool)" : "Neutral"}<br>
+        • <strong>CRI</strong>: ${criRange.value} — ${criRange.value < 80 ? "Poor color rendering." : criRange.value >= 90 ? "Excellent for tasks like science/art." : "Acceptable"}<br>
+        • <strong>Glare</strong>: ${glareRange.value} — ${glareRange.value > 60 ? "Risk of visual fatigue." : "Comfortable"}
+      `;
+    }
+
+    [luxRange, cctRange, criRange, glareRange].forEach(input =>
+      input.addEventListener("input", updateDisplay)
+    );
+
+    updateDisplay();
+
+    downloadBtn.addEventListener("click", function () {
+      html2canvas(roomDisplay).then(canvas => {
+        const dataURL = canvas.toDataURL("image/png");
+        downloadBtn.href = dataURL;
+      });
+    });
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+</html>
